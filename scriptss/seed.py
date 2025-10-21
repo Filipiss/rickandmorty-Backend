@@ -14,12 +14,13 @@ try:
     cursor = conn.cursor()
 
     # Cria a tabela episodes
+    
     episodes_table_query = """
         CREATE TABLE IF NOT EXISTS episodes (
             id VARCHAR(5) PRIMARY KEY,
             name VARCHAR(100),
             air_date VARCHAR(30),
-            episode VARCHAR(10)
+            episode VARCHAR(100)
         );
     """
     cursor.execute(episodes_table_query)
@@ -27,6 +28,7 @@ try:
     print('Tabela episodes criada com sucesso')
 
     # Cria a tabela locations
+
     locations_table_query = """
         CREATE TABLE IF NOT EXISTS locations (
             id VARCHAR(5) PRIMARY KEY,
@@ -41,6 +43,7 @@ try:
     print('Tabela localidades criada com sucesso')
 
     # Cria a tabela characters
+
     characters_table_query = """
         CREATE TABLE IF NOT EXISTS characters (
             id VARCHAR(5) PRIMARY KEY,
@@ -58,11 +61,12 @@ try:
     conn.commit()
     print('Tabela personagens criada com sucesso')
 
-    # Cria a tabela characters_episodes (corrigida)
+    # Cria a tabela characters_episodes
+
     characters_episodes_table_query = """
         CREATE TABLE IF NOT EXISTS characters_episodes (
-            character_id VARCHAR(2) NOT NULL,
-            episode_id VARCHAR(2) NOT NULL,
+            character_id VARCHAR(100) NOT NULL,
+            episode_id VARCHAR(100) NOT NULL,
             PRIMARY KEY (character_id, episode_id),
             FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE CASCADE ON UPDATE CASCADE
@@ -73,6 +77,7 @@ try:
     print('Tabela personagens_episodios criada com sucesso')
 
     # Cria as relações entre as tabelas characters e locations
+
     character_relations_query = """
         ALTER TABLE characters
         ADD CONSTRAINT fk_origin FOREIGN KEY (origin_id)
@@ -84,9 +89,27 @@ try:
     conn.commit()
     print('Relações da tabela characters criadas com sucesso')
 
+    # Cria a tabela characters_episodes 
 
-    # Insere os dados
-    
+    characters_episodes_table_query = """
+        CREATE TABLE IF NOT EXISTS characters_episodes (
+            character_id VARCHAR(5) NOT NULL,
+            episode_id VARCHAR(5) NOT NULL,
+            PRIMARY KEY (character_id, episode_id),
+            FOREIGN KEY (character_id) REFERENCES characters(id)
+                ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (episode_id) REFERENCES episodes(id)
+                ON DELETE CASCADE ON UPDATE CASCADE
+        );
+    """
+    cursor.execute(characters_episodes_table_query)
+    conn.commit()
+    print('Tabela characters_episodes criada com sucesso!')
+
+
+    # Insere os dados nas tabelas
+
+    # Insere dados episodios
     with open('allEpisodesUpdated.json', 'r', encoding='utf-8') as episodes_json:
         episodes_data = json.load(episodes_json)
 
@@ -109,6 +132,8 @@ try:
 
     conn.commit()
     print('Episodios inseridos com sucesso')
+
+    # Insere dados personagens
 
     with open('allCharsUpdated.json', 'r', encoding='utf-8') as characters_json:
         characters_data = json.load(characters_json)
@@ -138,6 +163,7 @@ try:
     conn.commit()
     print('Personagens inseridos com sucesso')
     
+    # Insere dados localidades
 
     with open('allLocations.json', 'r', encoding='utf-8') as locations_json:
         locations_data = json.load(locations_json)
@@ -163,10 +189,32 @@ try:
     conn.commit()
     print('Localidades inseridas com sucesso')
 
+    # Insere dados na tabela characters_episodes
+
+    characters_episodes_insert_query = """
+        INSERT INTO characters_episodes (character_id, episode_id)
+        VALUES (%s, %s)
+    """
+
+    for character in characters_data:
+        char_id = character['id']
+        episodes_list = character.get('episode', [])
+         
+        if isinstance(episodes_list, str):
+            episodes_list = [episodes_list]
+        
+        for ep in episodes_list:
+            episode_id = ep.split('/')[-1]
+            cursor.execute(characters_episodes_insert_query, (char_id, episode_id))
+
+    conn.commit()
+    print("Relações characters_episodes inseridas com sucesso!")
+
+
     # Fecha a conexão
     cursor.close()
     conn.close()
     print("Conexão encerrada com sucesso.")
 
-except Exception as e:
-    print("Deu algum erro:", e)
+except Exception:
+    print("Deu algum erro:")
