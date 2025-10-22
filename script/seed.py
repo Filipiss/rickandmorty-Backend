@@ -34,8 +34,7 @@ try:
             id VARCHAR(5) PRIMARY KEY,
             name VARCHAR(100),
             type VARCHAR(100),
-            dimension VARCHAR(100),
-            residents_count INT
+            dimension VARCHAR(100)
         );
     """
     cursor.execute(locations_table_query)
@@ -53,8 +52,8 @@ try:
             type VARCHAR(255),
             gender VARCHAR(50),
             image VARCHAR(255),
-            origin_id VARCHAR(5),
-            location_id VARCHAR(5)
+            origin_id VARCHAR(100),
+            location_id VARCHAR(100)
         );
     """
     cursor.execute(characters_table_query)
@@ -75,37 +74,6 @@ try:
     cursor.execute(characters_episodes_table_query)
     conn.commit()
     print('Tabela personagens_episodios criada com sucesso')
-
-    # Cria as relações entre as tabelas characters e locations
-
-    character_relations_query = """
-        ALTER TABLE characters
-        ADD CONSTRAINT fk_origin FOREIGN KEY (origin_id)
-        REFERENCES locations(id) ON DELETE CASCADE ON UPDATE CASCADE,
-        ADD CONSTRAINT fk_location FOREIGN KEY (location_id)
-        REFERENCES locations(id) ON DELETE CASCADE ON UPDATE CASCADE;
-    """
-    cursor.execute(character_relations_query)
-    conn.commit()
-    print('Relações da tabela characters criadas com sucesso')
-
-    # Cria a tabela characters_episodes 
-
-    characters_episodes_table_query = """
-        CREATE TABLE IF NOT EXISTS characters_episodes (
-            character_id VARCHAR(5) NOT NULL,
-            episode_id VARCHAR(5) NOT NULL,
-            PRIMARY KEY (character_id, episode_id),
-            FOREIGN KEY (character_id) REFERENCES characters(id)
-                ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY (episode_id) REFERENCES episodes(id)
-                ON DELETE CASCADE ON UPDATE CASCADE
-        );
-    """
-    cursor.execute(characters_episodes_table_query)
-    conn.commit()
-    print('Tabela characters_episodes criada com sucesso!')
-
 
     # Insere os dados nas tabelas
 
@@ -147,18 +115,24 @@ try:
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     
-    for characters in characters_data:
+    for character in characters_data:
+        origin_url = character.get('origin', {}).get('url', '')
+        origin_id = int(origin_url.split('/')[-1]) if origin_url else None
+
+        location_url = character.get('location', {}).get('url', '')
+        location_id = int(location_url.split('/')[-1]) if location_url else None
+
         cursor.execute(characters_import_query, (
-            characters['id'],
-            characters['name'],
-            characters['status'],
-            characters['species'],
-            characters['type'],
-            characters['gender'],
-            characters['image'],
-            characters.get('origin_id'),
-            characters.get('location_id')
-        ))
+            character['id'],
+            character['name'],
+            character['status'],
+            character['species'],
+            character['type'],
+            character['gender'],
+            character['image'],
+            origin_id,
+            location_id
+    ))
 
     conn.commit()
     print('Personagens inseridos com sucesso')
@@ -172,18 +146,17 @@ try:
 
     locations_import_query = """
         INSERT INTO locations (
-            id, name, type, dimension, residents_count
+            id, name, type, dimension
         )
-        VALUES (%s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s)
     """
     
-    for locations in locations_data:
+    for location in locations_data:
         cursor.execute(locations_import_query, (
-            locations['id'],
-            locations['name'],
-            locations['type'],
-            locations['dimension'],
-            locations.get('residents_count', 0)
+            location['id'],
+            location['name'],
+            location['type'],
+            location['dimension']
         ))
 
     conn.commit()
@@ -216,5 +189,5 @@ try:
     conn.close()
     print("Conexão encerrada com sucesso.")
 
-except Exception:
-    print("Deu algum erro:")
+except Exception as e:
+    print("Deu algum erro:", e)
